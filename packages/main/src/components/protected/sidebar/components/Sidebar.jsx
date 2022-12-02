@@ -197,7 +197,7 @@ const Sidebar = props => {
     <div
       ref={sidebarRef}
       style={{ width: sidebarWidth }}
-      onMouseDown={e => e.preventDefault()}
+      // onMouseDown={e => e.preventDefault()}
       className={`container-fluid ${styles.sb__container}`}
     >
       {sidebarWidth > 0 && (
