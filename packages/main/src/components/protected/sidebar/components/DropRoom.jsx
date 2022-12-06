@@ -2,19 +2,29 @@ import React, { useState, useEffect } from "react";
 import styles from "../styles/Drop.module.css";
 import ToggleSwitch from "./ToggleSwitch";
 import { BsToggleOff } from "react-icons/bs";
-import GrCircleAlert from "react-icons/gr";
+import GrCircleAlert, { GrOrganization } from "react-icons/gr";
 import axios from "axios";
 const DropRoom = props => {
-  const id = JSON.parse(localStorage.getItem("userData"));
-  const _id = id.user._id;
+  const user = JSON.parse(sessionStorage.getItem("user"));
+  const id = user.id;
+  const dateCreated = user.created_at;
+  // const org = JSON.parse(sessionStorage.getItem("organisations"));
+  // const organisations = [...org];
+  const [currentWorkspace, setCurrentWorkspace] = useState(() =>
+    JSON.parse(localStorage.getItem("currentWorkspace"))
+  );
   const token = id.token;
-  console.log(id.token);
+  const [roomMembers, setRoomMembers] = useState({});
+  const [getCurrentworkspace, setGetCurrentWorkspace] = useState(() =>
+    JSON.parse(sessionStorage.getItem("organisations"))
+  );
+
   const [formState, setFromState] = useState({
-    owner: _id,
     description: "",
     name: "",
     makeChannelPrivate: false,
-    share: false
+    share: false,
+    type: "CHANNEL"
   });
 
   const { description, name, makeChannelPrivate, share } = formState;
@@ -27,11 +37,51 @@ const DropRoom = props => {
     // console.log(e.target.value);
   };
 
+  const handleGetWorkspace = e => {
+    console.log(getCurrentworkspace, currentWorkspace);
+    console.log(
+      getCurrentworkspace.filter(workspace => workspace.id === currentWorkspace)
+    );
+    const workspace = getCurrentworkspace.filter(
+      workspace => workspace.id === currentWorkspace
+    );
+    sessionStorage.setItem("organisations", JSON.stringify(workspace));
+    setGetCurrentWorkspace(workspace);
+    createChannel(e);
+    console.log(getCurrentworkspace, workspace);
+  };
+
+  const org_id = getCurrentworkspace.id;
+
+  const room_id = sessionStorage.getItem("currentRoom");
+
+  useEffect(() => {
+    async function handleFetchAwait(id) {
+      let response = await fetch(
+        `https://chat.zuri.chat/api/v1/org/${org_id}/rooms/${room_id}/members`
+      );
+      let data = await response.json();
+      return data;
+    }
+
+    handleFetchAwait(21).then(data => {
+      setRoomMembers(data.data);
+    });
+  }, []);
   const createChannel = e => {
     e.preventDefault();
-    formState.private = formState.makeChannelPrivate;
+    const member_id = getCurrentworkspace.member_id;
+
+    formState.is_private = formState.makeChannelPrivate;
+    formState.room_type = formState.type;
+    formState.room_name = formState.name;
+    formState.room_members = roomMembers;
+
     delete formState.makeChannelPrivate;
     delete formState.share;
+    delete formState.type;
+    delete formState.name;
+
     const requestOptions = {
       method: "POST",
       headers: {
@@ -42,11 +92,12 @@ const DropRoom = props => {
       mode: "cors"
     };
 
-    fetch(`https://channels.zuri.chat/v1/${_id}/channels`, requestOptions)
+    fetch(
+      `https://chat.zuri.chat/api/v1/org/${org_id}/members/${member_id}/rooms`,
+      requestOptions
+    )
       .then(response => response.json())
-      .then(data => {
-        console.log(data);
-      })
+      .then(data => {})
       .catch(e => console.log(e));
   };
   return props.trigger ? (
@@ -140,7 +191,14 @@ const DropRoom = props => {
                 </label>
               </span>
               {/* <GrCircleAlert /> */}
-              <button onClick={e => createChannel(e)}> Create</button>
+              <button
+                onClick={e => {
+                  handleGetWorkspace(e);
+                }}
+              >
+                {" "}
+                Create
+              </button>
             </div>
           </div>
         </form>
